@@ -30,6 +30,7 @@ func (b *box) GetFieldValue(x, y int) int {
 
 // Initializes the field configuration from a given string
 // Format: xy:v with x between 0 and 2 (column) and y between 0 and 2 (row) and value v, separated by comma
+// TODO: Add error handling for malformed field configurations
 func (b *box) InitializeBox(fieldString string) {
 	fmt.Println("Reading input configuration...")
 	config := strings.Split(fieldString, ",")
@@ -44,7 +45,7 @@ func (b *box) InitializeBox(fieldString string) {
 	}
 }
 
-// Defininig ASCII constants for drawing the sudoku field
+// Defining ASCII constants for drawing the sudoku field
 // FOR FUTURE DEVELOPMENT
 const (
 	h_line       = "─"
