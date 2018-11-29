@@ -34,7 +34,7 @@ func launchTCPServer(port int) {
 	log.Println("Launching TCP Server")
 
 	ln, err := net.Listen("tcp", ":"+strconv.Itoa(port))
-	//defer ln.Close()
+	defer ln.Close()
 
 	if err != nil {
 		panic(err)
