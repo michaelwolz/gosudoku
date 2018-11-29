@@ -25,7 +25,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	gosudoku.InitializeSudoku(readFile(inputFile))
+	//gosudoku.InitializeSudoku(readFile(inputFile))
+	//gosudoku.Solve("simple")
+	gosudoku.MDNS()
 }
 
 // Reads field configuration from input file

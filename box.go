@@ -3,6 +3,7 @@ package gosudoku
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 )
@@ -33,7 +34,7 @@ func (b *box) GetFieldValue(x, y int) int {
 // Format: xy:v with x between 0 and 2 (column) and y between 0 and 2 (row) and value v, separated by comma
 // TODO: Add error handling for malformed field configurations
 func (b *box) InitializeBox(fieldString string) {
-	fmt.Println("Reading input configuration...")
+	log.Println("Reading input configuration...")
 	config := strings.Split(fieldString, ",")
 	for _, el := range config {
 		x, err := strconv.Atoi(string(el[0]))
