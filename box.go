@@ -1,6 +1,7 @@
 package gosudoku
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -43,6 +44,28 @@ func (b *box) InitializeBox(fieldString string) {
 		}
 		b.SetFieldValue(x, y, v)
 	}
+}
+
+// Get row values of local box.
+// row in range [0:2]
+func (b *box) getRow(row int) ([]int, error) {
+	if row < 0 || row > 2 {
+		return nil, errors.New("row number out of range")
+	}
+	return b.values[row*3 : row*3+3], nil
+}
+
+// Get column values of local box
+// col in range [0:2]
+func (b *box) getCol(col int) ([]int, error) {
+	if col < 0 || col > 2 {
+		return nil, errors.New("col number out of range")
+	}
+	colValues := make([]int, 3)
+	for i := 0; i < 3; i++ {
+		colValues[i] = b.values[i*3+col]
+	}
+	return colValues, nil
 }
 
 // Defining ASCII constants for drawing the sudoku field
