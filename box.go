@@ -33,7 +33,8 @@ func (b *box) GetFieldValue(x, y int) int {
 // Initializes the field configuration from a given string
 // Format: xy:v with x between 0 and 2 (column) and y between 0 and 2 (row) and value v, separated by comma
 // TODO: Add error handling for malformed field configurations
-func (b *box) InitializeBox(fieldString string) {
+func (b *box) InitializeBox(boxID *int, fieldString string) {
+	b.id = *boxID
 	log.Println("Reading input configuration...")
 	config := strings.Split(fieldString, ",")
 	for _, el := range config {

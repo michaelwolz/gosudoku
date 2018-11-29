@@ -9,19 +9,22 @@ var initialized bool
 var myBox box
 
 // Initializes the game
-func InitializeSudoku(fieldString string) {
+func InitializeSudoku(fieldString string, boxID *int) {
 	log.Println("Initializig Sudoku Solver!")
 
-	myBox.InitializeBox(fieldString)
+	myBox.InitializeBox(boxID, fieldString)
 	initialized = true
 	myBox.DrawBox()
 }
 
 // Starts solving algorithm
-func Solve(algorithm string) {
+func Solve(algorithm string, port *int) {
 	if !initialized {
 		log.Println("Solve(): Field not initialized! Nothing to solve.")
 	}
+
+	// Starting TCP Server
+	go launchTCPServer(*port)
 
 	switch algorithm {
 	case "simple":

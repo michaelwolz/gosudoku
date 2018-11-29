@@ -1,11 +1,11 @@
 package gosudoku
 
 import (
-	"context"
-	"flag"
-	"github.com/grandcat/zeroconf"
+	"bufio"
+	"fmt"
 	"log"
-	"time"
+	"net"
+	"strconv"
 )
 
 type Connection interface {
@@ -13,48 +13,77 @@ type Connection interface {
 	getCol() []int
 }
 
+type TCPConnection struct {
+	conn net.Conn
+	addr string
+	port int
+}
+
 // List of addresses to corresponding box numbers
 var boxList = make([]string, 9)
 
 // Use mDNS to find other boxes
-func MDNS() {
-	var (
-		service  = "_workstation._tcp"
-		domain   = "local."
-		waitTime = 10
-	)
+func FindBoxes(boxID *int, port *int) {
+	go registerService(boxID, port)
+	searchForClients()
+}
 
-	// Discover all services on the network (e.g. _workstation._tcp)
-	resolver, err := zeroconf.NewResolver(nil)
+// Launching a TCP Server on given port number.
+// It handles all incoming request from other boxes
+func launchTCPServer(port int) {
+	log.Println("Launching TCP Server")
+
+	ln, err := net.Listen("tcp", ":"+strconv.Itoa(port))
+	//defer ln.Close()
+
 	if err != nil {
-		log.Fatalln("Failed to initialize resolver:", err.Error())
+		panic(err)
 	}
 
-	entries := make(chan *zeroconf.ServiceEntry)
-	go func(results <-chan *zeroconf.ServiceEntry) {
-		for entry := range results {
-			log.Println(entry)
+	for {
+		conn, err := ln.Accept()
+		if err != nil {
+			fmt.Println("Error accepting: ", err.Error())
 		}
-		log.Println("No more entries.")
-	}(entries)
+		go handleTCPRequest(conn)
+	}
+}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(*waitTime))
-	defer cancel()
-	err = resolver.Browse(ctx, *service, *domain, entries)
-	if err != nil {
-		log.Fatalln("Failed to browse:", err.Error())
+// Handle TCP requests from other boxes
+func handleTCPRequest(conn net.Conn) {
+	// Will listen for message to process ending in newline (\n)
+	message, _ := bufio.NewReader(conn).ReadString('\n')
+
+	// Handle command
+	switch string(message) {
+	case "getRow":
+		conn.Write([]byte("getRow\n"))
+	case "getCol":
+		conn.Write([]byte("getCol\n"))
+	default:
+		log.Println("Unknown Command received!")
+		conn.Write([]byte("Unknown Command\n"))
 	}
 
-	<-ctx.Done()
-	// Wait some additional time to see debug messages on go routine shutdown.
-	time.Sleep(1 * time.Second)
+	conn.Close()
 }
 
-func ConnectToServer(ip string, port int) {
-	// TODO: Implement simple connection to a server
+// Connect to a TCP-Server
+func (t *TCPConnection) tcpconnect() net.Conn {
+	conn, err := net.Dial("tcp", t.addr+":"+strconv.Itoa(t.port))
+	if err != nil {
+		log.Println(err)
+	}
+	return conn
 }
 
-func DecentralConnection() {
-	// TODO: Implement a fully decentralized version
-	// Probably not gonna happen, but it would be pretty nice :D
+// Send message via TCP
+func (t *TCPConnection) sendTCPMessage(message string) {
+	fmt.Fprintf(t.conn, message+"\n")
+
+	reply, err := bufio.NewReader(t.conn).ReadString('\n')
+	if err != nil {
+		log.Println(err)
+	}
+	fmt.Print("Reply from server: " + reply)
 }
