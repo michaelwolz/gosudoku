@@ -9,25 +9,11 @@ import (
 )
 
 type box struct {
-	id     int
-	values [9]int
-}
-
-// Returns true if all values of the sudoku box are filled
-// TODO: THIS IS JUST WRONG!
-func (b *box) IsFull() bool {
-	return len(b.values) == cap(b.values)
-}
-
-// Helper function to set field value via coordinates
-func (b *box) SetFieldValue(x, y, v int) {
-	// Matrix conversion, see: https://stackoverflow.com/a/14015582
-	b.values[x+y*3] = v
-}
-
-// Helper function to set field value via coordinates
-func (b *box) GetFieldValue(x, y int) int {
-	return b.values[x+y*3]
+	id             int
+	values         [9]int
+	possibleValues [9]map[int]struct{}
+	rowValues      [3][9]int // Stores all values which are set in a whole row (includes values from other boxes)
+	colValues      [3][9]int // Stores all values which are set in a whole column (includes values from other boxes)
 }
 
 // Initializes the field configuration from a given string
@@ -46,6 +32,72 @@ func (b *box) InitializeBox(boxID *int, fieldString string) {
 		}
 		b.SetFieldValue(x, y, v)
 	}
+}
+
+// Set field value via coordinates
+func (b *box) SetFieldValue(x, y, v int) {
+	// Matrix conversion, see: https://stackoverflow.com/a/14015582
+	b.values[x+y*3] = v
+}
+
+// Set field value via coordinates
+func (b *box) GetFieldValue(x, y int) int {
+	return b.values[x+y*3]
+}
+
+// Calculate possible values for empty fields
+func (b *box) CalculatePossibleValues() {
+	for field, value := range b.values {
+		if value == 0 {
+			var impossibleValues = map[int]struct{}{}
+			addValuesToMap(b.rowValues[0], &impossibleValues)
+			addValuesToMap(b.colValues[0], &impossibleValues)
+			addValuesToMap(b.values, &impossibleValues)
+			for i := 0; i < 9; i++ {
+				if _, ok := impossibleValues[i]; !ok {
+					b.possibleValues[field][i] = struct{}{}
+				}
+			}
+			if len(b.possibleValues[field]) < 2 {
+				var err error
+				b.values[field], err = getKey(b.possibleValues[field])
+				if err != nil {
+					panic(err)
+				}
+				b.CalculatePossibleValues()
+			}
+		}
+	}
+}
+
+// Add multiple values to map structure
+func addValuesToMap(values []int, m *map[int]struct{}) {
+	for i := range values {
+		m[i] = struct{}{}
+	}
+}
+
+// Removes possible value from a field
+func (b *box) removePossibleValues(field int, value int) {
+	delete(b.possibleValues[field], value)
+}
+
+// Helper function to get first key of map
+func getKey(m map[int]struct{}) (key int, err error) {
+	for k := range m {
+		return k, nil
+	}
+	return 0, errors.New("empty map")
+}
+
+// Helper function for checking if integer value is in slice (linear time :S)
+func InSlice(slice []int, value int) bool {
+	for _, x := range slice {
+		if value == x {
+			return true
+		}
+	}
+	return false
 }
 
 // Get row values of local box.
@@ -70,22 +122,7 @@ func (b *box) getCol(col int) ([]int, error) {
 	return colValues, nil
 }
 
-// Defining ASCII constants for drawing the sudoku field
-// FOR FUTURE DEVELOPMENT
-const (
-	h_line       = "─"
-	v_line       = "│"
-	cross        = "┼"
-	t_bar_top    = "┬"
-	t_bar_bottom = "┴"
-	rt_corner    = "╭"
-	rb_corner    = "╰"
-	lt_corner    = "╮"
-	lb_corner    = "╯"
-)
-
 // Draws box for pretty output
-// TODO: Make this nice
 func (b *box) DrawBox() {
 	fmt.Printf("╭─────┬─────┬─────╮\n")
 	fmt.Printf("│  %d  │  %d  │  %d  │\n", b.GetFieldValue(0, 0), b.GetFieldValue(1, 0), b.GetFieldValue(2, 0))
