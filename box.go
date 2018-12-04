@@ -9,7 +9,7 @@ import (
 )
 
 type box struct {
-	id             int
+	id             string
 	values         [9]int
 	possibleValues [9]map[int]struct{}
 	rowValues      [3][9]int // Stores all values which are set in a whole row (includes values from other boxes)
@@ -19,7 +19,7 @@ type box struct {
 // Initializes the field configuration from a given string
 // Format: xy:v with x between 0 and 2 (column) and y between 0 and 2 (row) and value v, separated by comma
 // TODO: Add error handling for malformed field configurations
-func (b *box) InitializeBox(boxID *int, fieldString string) {
+func (b *box) InitializeBox(boxID *string, fieldString string) {
 	b.id = *boxID
 	log.Println("Reading input configuration...")
 	config := strings.Split(fieldString, ",")
@@ -50,9 +50,9 @@ func (b *box) CalculatePossibleValues() {
 	for field, value := range b.values {
 		if value == 0 {
 			var impossibleValues = map[int]struct{}{}
-			addValuesToMap(b.rowValues[0], &impossibleValues)
-			addValuesToMap(b.colValues[0], &impossibleValues)
-			addValuesToMap(b.values, &impossibleValues)
+			//addValuesToMap(b.rowValues[0], &impossibleValues)
+			//addValuesToMap(b.colValues[0], &impossibleValues)
+			//addValuesToMap(b.values, &impossibleValues)
 			for i := 0; i < 9; i++ {
 				if _, ok := impossibleValues[i]; !ok {
 					b.possibleValues[field][i] = struct{}{}
@@ -71,7 +71,7 @@ func (b *box) CalculatePossibleValues() {
 }
 
 // Add multiple values to map structure
-func addValuesToMap(values []int, m *map[int]struct{}) {
+func addValuesToMap(values []int, m map[int]struct{}) {
 	for i := range values {
 		m[i] = struct{}{}
 	}

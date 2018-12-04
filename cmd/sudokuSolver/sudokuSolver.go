@@ -9,19 +9,23 @@ import (
 )
 
 var (
-	inputFile string
-	boxID     int
-	port      int
+	inputFile      string
+	managerAddress string
+	boxID          string
+	lport          int
+	mport          int
 )
 
 // Initializes flag configuration
 func init() {
 	flag.StringVar(&inputFile, "input", "", "Input Sudoku field as .txt")
-	flag.IntVar(&boxID, "boxID", -1, "Box Number")
-	flag.IntVar(&port, "port", -1, "Port")
+	flag.StringVar(&boxID, "boxID", "", "Box Number")
+	flag.IntVar(&mport, "mport", -1, "Manager port")
+	flag.IntVar(&lport, "lport", -1, "Local port")
+	flag.StringVar(&managerAddress, "maddress", "127.0.0.1", "Address of the box manager")
 }
 
-// Usage: sudokuSolver -input={INPUTFILE} [-distributed] [-box={BOXNUMBER}] [-auto]
+// Usage: sudokuSolver -input={INPUTFILE} -lport={LOCALPORT} -mport={MANAGERPORT} -box={BOXNUMBER} -maddress={MANAGERADDRESS}
 func main() {
 	flag.Parse()
 
@@ -30,19 +34,24 @@ func main() {
 		os.Exit(1)
 	}
 
-	if boxID == -1 {
+	if boxID == "" {
 		fmt.Println("-boxID option is missing! You have to provide a box number [0-8]")
 		os.Exit(1)
 	}
 
-	if port == -1 {
-		fmt.Println("-port option is missing!")
+	if lport == -1 {
+		fmt.Println("-lport option is missing!")
+		os.Exit(1)
+	}
+
+	if mport == -1 {
+		fmt.Println("-mport option is missing!")
 		os.Exit(1)
 	}
 
 	gosudoku.InitializeSudoku(readFile(inputFile), &boxID)
-	//gosudoku.FindBoxes(&boxID, &port)
-	gosudoku.Solve("simple", &port)
+	gosudoku.ConnectToManager(&managerAddress, &mport, &lport)
+	//gosudoku.Solve()
 }
 
 // Reads field configuration from input file
