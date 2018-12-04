@@ -14,12 +14,25 @@ type TCPConnection struct {
 	port int
 }
 
+var BoxManager TCPConnection
+var boxes map[string]TCPConnection
+
+// Establish initial connection to box manager
 func ConnectToManager(maddress *string, mport *int, lport *int) {
-	var connection TCPConnection
-	connection.addr = *maddress
-	connection.port = *mport
-	connection.connect()
-	connection.sendMessage(MyBox.id + "," + getLocalIP().String() + "," + strconv.Itoa(*lport))
+	BoxManager.addr = *maddress
+	BoxManager.port = *mport
+	BoxManager.connect()
+	reply := BoxManager.sendMessage(MyBox.id + "," + getLocalIP().String() + "," + strconv.Itoa(*lport))
+	log.Println(reply)
+
+	// Testing only
+	//result := BoxManager.sendMessage("GET(BOX_B1)")
+	//fmt.Println(result)
+}
+
+// Connect to Box
+func ConnectToBox(addr *string, port *int) net.Conn {
+	return nil
 }
 
 // Connect to a TCP-Server
@@ -32,13 +45,37 @@ func (t *TCPConnection) connect() {
 }
 
 // Send message via TCP
-func (t *TCPConnection) sendMessage(message string) {
+func (t *TCPConnection) sendMessage(message string) string {
 	fmt.Fprintf(t.conn, message+"\n")
+
 	reply, err := bufio.NewReader(t.conn).ReadString('\n')
 	if err != nil {
 		panic(err)
 	}
-	fmt.Print("Reply from server: " + reply)
+	return reply
+}
+
+// Launching a TCP Server on given port number.
+// It handles all incoming request from other boxes
+func LaunchTCPServer(port *int) {
+	go func() {
+		log.Println("Launching TCP Server")
+
+		ln, err := net.Listen("tcp", ":"+strconv.Itoa(*port))
+		defer ln.Close()
+
+		if err != nil {
+			panic(err)
+		}
+
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				fmt.Println("Error accepting: ", err.Error())
+			}
+			go handleTCPRequest(conn)
+		}
+	}()
 }
 
 // Handle TCP requests from box manager
