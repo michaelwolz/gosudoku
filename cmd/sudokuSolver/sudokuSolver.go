@@ -50,7 +50,7 @@ func main() {
 	}
 
 	gosudoku.InitializeSudoku(readFile(inputFile), &boxID)
-	gosudoku.LaunchTCPServer(&lport)
+	//gosudoku.LaunchTCPServer(&lport)
 	gosudoku.ConnectToManager(&managerAddress, &mport, &lport)
 	//gosudoku.Solve()
 }

@@ -2,10 +2,12 @@ package gosudoku
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"log"
 	"net"
 	"strconv"
+	"strings"
 )
 
 type TCPConnection struct {
@@ -23,11 +25,11 @@ func ConnectToManager(maddress *string, mport *int, lport *int) {
 	BoxManager.port = *mport
 	BoxManager.connect()
 	reply := BoxManager.sendMessage(MyBox.id + "," + getLocalIP().String() + "," + strconv.Itoa(*lport))
-	log.Println(reply)
-
-	// Testing only
-	//result := BoxManager.sendMessage("GET(BOX_B1)")
-	//fmt.Println(result)
+	if reply == "OK" {
+		log.Println("connected to boxmanager.")
+	} else {
+		panic(errors.New("connection to boxmanager failed"))
+	}
 }
 
 // Connect to Box
@@ -52,7 +54,7 @@ func (t *TCPConnection) sendMessage(message string) string {
 	if err != nil {
 		panic(err)
 	}
-	return reply
+	return strings.TrimRight(reply, "\n")
 }
 
 // Launching a TCP Server on given port number.
@@ -71,7 +73,7 @@ func LaunchTCPServer(port *int) {
 		for {
 			conn, err := ln.Accept()
 			if err != nil {
-				fmt.Println("Error accepting: ", err.Error())
+				log.Println("Error accepting: ", err.Error())
 			}
 			go handleTCPRequest(conn)
 		}
@@ -86,12 +88,10 @@ func handleTCPRequest(conn net.Conn) {
 	// Handle command
 	switch string(message) {
 	case "getRow":
-		conn.Write([]byte("getRow\n"))
-	case "getCol":
-		conn.Write([]byte("getCol\n"))
+		conn.Write([]byte("sendVal\n"))
 	default:
-		log.Println("Unknown Command received!")
-		conn.Write([]byte("Unknown Command\n"))
+		log.Println("unknown command received!")
+		conn.Write([]byte("unknown command\n"))
 	}
 
 	conn.Close()
