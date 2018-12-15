@@ -88,30 +88,24 @@ func (b *box) checkAndSet(index int) {
 			delete(b.possibleValues[index], key)
 		}
 		b.values[index] = val
-		// TODO: Alert neighbors
+		x, y := getCoordinatesForIndex(index)
+		sendToNeighbors(x, y, val)
 	}
 }
 
-// TODO: DELETE FROM ALL!!!
-
-// Add multiple values to map structure
-func addValuesToMap(values []int, m map[int]struct{}) {
-	for i := range values {
-		m[i] = struct{}{}
+// Removes value from possible values from all field
+func (b *box) removeFromPossibleValues(val int) {
+	for field := range b.possibleValues {
+		if _, ok := b.possibleValues[field][val]; ok {
+			delete(b.possibleValues[field], val)
+			b.checkAndSet(field)
+		}
 	}
 }
 
 // Removes possible value from a field
 func (b *box) removePossibleValues(field int, value int) {
 	delete(b.possibleValues[field], value)
-}
-
-// Helper function to get first key of map
-func getKey(m map[int]struct{}) (key int, err error) {
-	for k := range m {
-		return k, nil
-	}
-	return 0, errors.New("empty map")
 }
 
 // Get row values of local box.

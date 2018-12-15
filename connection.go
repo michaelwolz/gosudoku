@@ -72,6 +72,13 @@ func sendInitialConfig() {
 	}
 }
 
+// Sends message with value to all neighbors
+func sendToNeighbors(x, y, val int) {
+	for _, neighbor := range boxConnections {
+		neighbor.sendMessage(myBox.id + "," + strconv.Itoa(x) + "," + strconv.Itoa(y) + ":" + strconv.Itoa(val))
+	}
+}
+
 // Check IP/Port answer from boxManager
 func checkIP(ip *string) bool {
 	r, _ := regexp.Compile(`^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]),[0-9]+$`)
@@ -121,7 +128,6 @@ func LaunchTCPServer(port *int) {
 }
 
 // Handle TCP requests from box manager
-// TODO: it's better to check for values in boxmap instead of only comparing start character
 func handleTCPRequest(conn net.Conn) {
 	// Will listen for message to process ending in newline (\n)
 	message, _ := bufio.NewReader(conn).ReadString('\n')
