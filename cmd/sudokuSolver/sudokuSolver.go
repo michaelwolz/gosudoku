@@ -25,7 +25,7 @@ func init() {
 	flag.StringVar(&managerAddress, "maddress", "127.0.0.1", "Address of the box manager")
 }
 
-// Usage: sudokuSolver -input={INPUTFILE} -lport={LOCALPORT} -mport={MANAGERPORT} -box={BOXNUMBER} -maddress={MANAGERADDRESS}
+// Usage: sudokuSolver -input={INPUTFILE} -lport={LOCALPORT} -maddress={MANAGERADDRESS} -mport={MANAGERPORT} -boxID={BOXNUMBER}
 func main() {
 	flag.Parse()
 
@@ -35,7 +35,7 @@ func main() {
 	}
 
 	if boxID == "" {
-		fmt.Println("-boxID option is missing! You have to provide a box number [0-8]")
+		fmt.Println("-boxID option is missing!")
 		os.Exit(1)
 	}
 

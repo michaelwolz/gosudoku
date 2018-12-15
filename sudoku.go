@@ -5,15 +5,15 @@ import (
 )
 
 var initialized bool
-var MyBox box
+var myBox box
 
 // Initializes the game
 func InitializeSudoku(fieldString string, boxID *string) {
 	log.Println("Initializig Sudoku Solver!")
 
-	MyBox.InitializeBox(boxID, fieldString)
+	myBox.InitializeBox(boxID, fieldString)
 	initialized = true
-	MyBox.DrawBox()
+	myBox.DrawBox()
 }
 
 // Starts solving algorithm

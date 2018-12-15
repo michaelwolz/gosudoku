@@ -12,8 +12,8 @@ type box struct {
 	id             string
 	values         [9]int
 	possibleValues [9]map[int]struct{}
-	rowValues      [3][9]int // Stores all values which are set in a whole row (includes values from other boxes)
-	colValues      [3][9]int // Stores all values which are set in a whole column (includes values from other boxes)
+	rowValues      [3][8]int // Stores all values which are set in a whole row (includes values from other boxConnections)
+	colValues      [3][8]int // Stores all values which are set in a whole column (includes values from other boxConnections)
 }
 
 // Initializes the field configuration from a given string
@@ -43,6 +43,11 @@ func (b *box) SetFieldValue(x, y, v int) {
 // Set field value via coordinates
 func (b *box) GetFieldValue(x, y int) int {
 	return b.values[x+y*3]
+}
+
+//Helper function to return coordinates from index
+func getCoordinatesForIndex(index int) (int, int) {
+	return index % 3, index / 3
 }
 
 // Calculate possible values for empty fields
@@ -88,16 +93,6 @@ func getKey(m map[int]struct{}) (key int, err error) {
 		return k, nil
 	}
 	return 0, errors.New("empty map")
-}
-
-// Helper function for checking if integer value is in slice (linear time :S)
-func InSlice(slice []int, value int) bool {
-	for _, x := range slice {
-		if value == x {
-			return true
-		}
-	}
-	return false
 }
 
 // Get row values of local box.
