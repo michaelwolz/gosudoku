@@ -12,14 +12,14 @@ type box struct {
 	id             string
 	values         [9]int
 	possibleValues [9]map[int]struct{}
-	rowValues      [3][8]int // Stores all values which are set in a whole row (includes values from other boxConnections)
-	colValues      [3][8]int // Stores all values which are set in a whole column (includes values from other boxConnections)
+	rowValues      [3][]int // Stores all values which are set in a whole row (includes values from other boxConnections)
+	colValues      [3][]int // Stores all values which are set in a whole column (includes values from other boxConnections)
 }
 
 // Initializes the field configuration from a given string
 // Format: xy:v with x between 0 and 2 (column) and y between 0 and 2 (row) and value v, separated by comma
 // TODO: Add error handling for malformed field configurations
-func (b *box) InitializeBox(boxID *string, fieldString string) {
+func (b *box) initializeBox(boxID *string, fieldString string) {
 	b.id = *boxID
 	log.Println("Reading input configuration...")
 	config := strings.Split(fieldString, ",")
@@ -27,21 +27,30 @@ func (b *box) InitializeBox(boxID *string, fieldString string) {
 		x, err := strconv.Atoi(string(el[0]))
 		y, err := strconv.Atoi(string(el[1]))
 		v, err := strconv.Atoi(string(el[3]))
-		if err != nil {
-			panic(err)
+		checkErr(err)
+		b.setFieldValue(x, y, v)
+	}
+
+	// Set initial possible values
+	for field, value := range b.values {
+		if value == 0 {
+			for i := 1; i < 10; i++ {
+				if !intContains(b.values[:], i) {
+					b.possibleValues[field][i] = struct{}{}
+				}
+			}
 		}
-		b.SetFieldValue(x, y, v)
 	}
 }
 
 // Set field value via coordinates
-func (b *box) SetFieldValue(x, y, v int) {
+func (b *box) setFieldValue(x, y, v int) {
 	// Matrix conversion, see: https://stackoverflow.com/a/14015582
 	b.values[x+y*3] = v
 }
 
 // Set field value via coordinates
-func (b *box) GetFieldValue(x, y int) int {
+func (b *box) getFieldValue(x, y int) int {
 	return b.values[x+y*3]
 }
 
@@ -50,30 +59,40 @@ func getCoordinatesForIndex(index int) (int, int) {
 	return index % 3, index / 3
 }
 
-// Calculate possible values for empty fields
-func (b *box) CalculatePossibleValues() {
-	for field, value := range b.values {
-		if value == 0 {
-			var impossibleValues = map[int]struct{}{}
-			//addValuesToMap(b.rowValues[0], &impossibleValues)
-			//addValuesToMap(b.colValues[0], &impossibleValues)
-			//addValuesToMap(b.values, &impossibleValues)
-			for i := 0; i < 9; i++ {
-				if _, ok := impossibleValues[i]; !ok {
-					b.possibleValues[field][i] = struct{}{}
-				}
-			}
-			if len(b.possibleValues[field]) < 2 {
-				var err error
-				b.values[field], err = getKey(b.possibleValues[field])
-				if err != nil {
-					panic(err)
-				}
-				b.CalculatePossibleValues()
-			}
-		}
+// Set row value
+func (b *box) setRowValue(xcoord int, val int) {
+	b.rowValues[xcoord] = append(b.rowValues[xcoord], val)
+	for i := 0; i < 3; i++ {
+		index := xcoord*3 + i
+		delete(b.possibleValues[index], val)
+		b.checkAndSet(index)
 	}
 }
+
+// Set column value
+func (b *box) setColValue(ycoord int, val int) {
+	b.colValues[ycoord] = append(b.colValues[ycoord], val)
+	for i := 0; i < 3; i++ {
+		index := ycoord + i*3
+		delete(b.possibleValues[index], val)
+		b.checkAndSet(index)
+	}
+}
+
+// Check and set possible values
+func (b *box) checkAndSet(index int) {
+	if len(b.possibleValues[index]) < 2 {
+		var val int
+		for key := range b.possibleValues[index] {
+			val = key
+			delete(b.possibleValues[index], key)
+		}
+		b.values[index] = val
+		// TODO: Alert neighbors
+	}
+}
+
+// TODO: DELETE FROM ALL!!!
 
 // Add multiple values to map structure
 func addValuesToMap(values []int, m map[int]struct{}) {
@@ -120,10 +139,10 @@ func (b *box) getCol(col int) ([]int, error) {
 // Draws box for pretty output
 func (b *box) DrawBox() {
 	fmt.Printf("╭─────┬─────┬─────╮\n")
-	fmt.Printf("│  %d  │  %d  │  %d  │\n", b.GetFieldValue(0, 0), b.GetFieldValue(1, 0), b.GetFieldValue(2, 0))
+	fmt.Printf("│  %d  │  %d  │  %d  │\n", b.getFieldValue(0, 0), b.getFieldValue(1, 0), b.getFieldValue(2, 0))
 	fmt.Printf("├─────┼─────┼─────┤\n")
-	fmt.Printf("│  %d  │  %d  │  %d  │\n", b.GetFieldValue(0, 1), b.GetFieldValue(1, 1), b.GetFieldValue(2, 1))
+	fmt.Printf("│  %d  │  %d  │  %d  │\n", b.getFieldValue(0, 1), b.getFieldValue(1, 1), b.getFieldValue(2, 1))
 	fmt.Printf("├─────┼─────┼─────┤\n")
-	fmt.Printf("│  %d  │  %d  │  %d  │\n", b.GetFieldValue(0, 2), b.GetFieldValue(1, 2), b.GetFieldValue(2, 2))
+	fmt.Printf("│  %d  │  %d  │  %d  │\n", b.getFieldValue(0, 2), b.getFieldValue(1, 2), b.getFieldValue(2, 2))
 	fmt.Printf("╰─────┴─────┴─────╯\n")
 }

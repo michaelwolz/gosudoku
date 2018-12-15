@@ -11,7 +11,7 @@ var myBox box
 func InitializeSudoku(fieldString string, boxID *string) {
 	log.Println("Initializig Sudoku Solver!")
 
-	myBox.InitializeBox(boxID, fieldString)
+	myBox.initializeBox(boxID, fieldString)
 	initialized = true
 	myBox.DrawBox()
 }

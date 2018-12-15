@@ -89,7 +89,8 @@ func (t *TCPConnection) connect() {
 
 // Send message via TCP
 func (t *TCPConnection) sendMessage(message string) string {
-	fmt.Fprintf(t.conn, message+"\n")
+	_, err := fmt.Fprintf(t.conn, message+"\n")
+	checkErr(err)
 
 	reply, err := bufio.NewReader(t.conn).ReadString('\n')
 	if err != nil {
@@ -107,9 +108,7 @@ func LaunchTCPServer(port *int) {
 		ln, err := net.Listen("tcp", ":"+strconv.Itoa(*port))
 		defer ln.Close()
 
-		if err != nil {
-			panic(err)
-		}
+		checkErr(err)
 
 		for {
 			conn, err := ln.Accept()
@@ -122,35 +121,31 @@ func LaunchTCPServer(port *int) {
 }
 
 // Handle TCP requests from box manager
+// TODO: it's better to check for values in boxmap instead of only comparing start character
 func handleTCPRequest(conn net.Conn) {
 	// Will listen for message to process ending in newline (\n)
 	message, _ := bufio.NewReader(conn).ReadString('\n')
+	message = strings.TrimRight(message, "\n")
 
-	// Handle command
-	switch string(message) {
-	case "getRow":
-		conn.Write([]byte("sendVal\n"))
-	default:
-		log.Println("unknown command received!")
-		conn.Write([]byte("unknown command\n"))
-	}
-
-	conn.Close()
-}
-
-// Get Local IP Address (https://gist.github.com/jniltinho/9787946)
-func getLocalIP() net.IP {
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		panic(err)
-	}
-
-	for _, a := range addrs {
-		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				return ipnet.IP
+	if checkMessageFormat(message) {
+		r := regexp.MustCompile(`^(BOX_[A,D,G])[1,4,7],([0-2]),([0-2]):([1-9])$`)
+		matches := r.FindStringSubmatch(message)
+		if strContains(boxMap[myBox.id], matches[1]) {
+			val, err := strconv.Atoi(matches[4])
+			checkSoftErr(err)
+			if matches[1] == myBox.id[:len(myBox.id)-1] {
+				y, err := strconv.Atoi(matches[3])
+				checkSoftErr(err)
+				myBox.setColValue(y, val)
+			} else {
+				x, err := strconv.Atoi(matches[2])
+				checkSoftErr(err)
+				myBox.setRowValue(x, val)
 			}
+		} else {
+			log.Println("ALERT: STRANGER DANGER!!!")
 		}
 	}
-	return nil
+	err := conn.Close()
+	checkErr(err)
 }
