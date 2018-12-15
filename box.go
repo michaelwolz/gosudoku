@@ -34,9 +34,11 @@ func (b *box) initializeBox(boxID *string, fieldString string) {
 	// Set initial possible values
 	for field, value := range b.values {
 		if value == 0 {
+			b.possibleValues[field] = make(map[int]struct{})
 			for i := 1; i < 10; i++ {
 				if !intContains(b.values[:], i) {
 					b.possibleValues[field][i] = struct{}{}
+
 				}
 			}
 		}
@@ -60,36 +62,46 @@ func getCoordinatesForIndex(index int) (int, int) {
 }
 
 // Set row value
-func (b *box) setRowValue(xcoord int, val int) {
-	b.rowValues[xcoord] = append(b.rowValues[xcoord], val)
+func (b *box) setRowValue(ycoord int, val int) {
+	b.rowValues[ycoord] = append(b.rowValues[ycoord], val)
 	for i := 0; i < 3; i++ {
-		index := xcoord*3 + i
+		index := ycoord*3 + i
 		delete(b.possibleValues[index], val)
-		b.checkAndSet(index)
+		// TODO: Why are all map values deleted? (same for setColValues)
+		fmt.Print(myBox.id + ":")
+		fmt.Println(b.possibleValues[index])
+
+		//b.checkAndSet(index)
 	}
 }
 
 // Set column value
-func (b *box) setColValue(ycoord int, val int) {
-	b.colValues[ycoord] = append(b.colValues[ycoord], val)
+func (b *box) setColValue(xcoord int, val int) {
+	b.colValues[xcoord] = append(b.colValues[xcoord], val)
 	for i := 0; i < 3; i++ {
-		index := ycoord + i*3
+		index := xcoord + i*3
 		delete(b.possibleValues[index], val)
-		b.checkAndSet(index)
+
+		fmt.Print(myBox.id + ":")
+		fmt.Println(b.possibleValues[index])
+
+		//b.checkAndSet(index)
 	}
 }
 
 // Check and set possible values
 func (b *box) checkAndSet(index int) {
-	if len(b.possibleValues[index]) < 2 {
+	if len(b.possibleValues[index]) == 1 {
 		var val int
 		for key := range b.possibleValues[index] {
 			val = key
 			delete(b.possibleValues[index], key)
 		}
-		b.values[index] = val
 		x, y := getCoordinatesForIndex(index)
+		fmt.Println("ONLY POSSIBLE VALUE FOR: " + strconv.Itoa(x) + "," + strconv.Itoa(y) + " LEFT IS: " + strconv.Itoa(val))
+		b.values[index] = val
 		sendToNeighbors(x, y, val)
+		// TODO: removeFromPossibleValues
 	}
 }
 
@@ -101,11 +113,6 @@ func (b *box) removeFromPossibleValues(val int) {
 			b.checkAndSet(field)
 		}
 	}
-}
-
-// Removes possible value from a field
-func (b *box) removePossibleValues(field int, value int) {
-	delete(b.possibleValues[field], value)
 }
 
 // Get row values of local box.

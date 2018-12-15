@@ -18,7 +18,7 @@ type TCPConnection struct {
 }
 
 var boxManager TCPConnection
-var boxConnections map[string]TCPConnection
+var boxConnections = make(map[string]TCPConnection)
 
 // Establish initial connection to box manager
 func ConnectToManager(maddress *string, mport *int, lport *int) {
@@ -33,6 +33,7 @@ func ConnectToManager(maddress *string, mport *int, lport *int) {
 	} else {
 		panic(errors.New("connection to boxmanager failed"))
 	}
+	// TODO: Close connection to box manager
 }
 
 // Connect to corresponding Boxes based on myBox
@@ -66,8 +67,11 @@ func connectToBox(addr string, port int) TCPConnection {
 func sendInitialConfig() {
 	for _, box := range boxConnections {
 		for key, val := range myBox.values {
-			x, y := getCoordinatesForIndex(key)
-			box.sendMessage(myBox.id + "," + strconv.Itoa(x) + "," + strconv.Itoa(y) + ":" + strconv.Itoa(val))
+			if val != 0 {
+				x, y := getCoordinatesForIndex(key)
+				reply := box.sendMessage(myBox.id + "," + strconv.Itoa(x) + "," + strconv.Itoa(y) + ":" + strconv.Itoa(val))
+				fmt.Println(reply)
+			}
 		}
 	}
 }
@@ -75,7 +79,8 @@ func sendInitialConfig() {
 // Sends message with value to all neighbors
 func sendToNeighbors(x, y, val int) {
 	for _, neighbor := range boxConnections {
-		neighbor.sendMessage(myBox.id + "," + strconv.Itoa(x) + "," + strconv.Itoa(y) + ":" + strconv.Itoa(val))
+		reply := neighbor.sendMessage(myBox.id + "," + strconv.Itoa(x) + "," + strconv.Itoa(y) + ":" + strconv.Itoa(val))
+		fmt.Println(reply)
 	}
 }
 
@@ -96,14 +101,13 @@ func (t *TCPConnection) connect() {
 
 // Send message via TCP
 func (t *TCPConnection) sendMessage(message string) string {
-	_, err := fmt.Fprintf(t.conn, message+"\n")
+	_, err := t.conn.Write([]byte(message + "\n"))
 	checkErr(err)
 
 	reply, err := bufio.NewReader(t.conn).ReadString('\n')
-	if err != nil {
-		panic(err)
-	}
-	return strings.TrimRight(reply, "\n")
+	checkErr(err)
+
+	return strings.TrimSuffix(reply, "\n")
 }
 
 // Launching a TCP Server on given port number.
@@ -127,31 +131,37 @@ func LaunchTCPServer(port *int) {
 	}()
 }
 
+// TODO: unblock connection
 // Handle TCP requests from box manager
 func handleTCPRequest(conn net.Conn) {
+	var message string
+	var err error
+
 	// Will listen for message to process ending in newline (\n)
-	message, _ := bufio.NewReader(conn).ReadString('\n')
-	message = strings.TrimRight(message, "\n")
+	message, err = bufio.NewReader(conn).ReadString('\n')
+	message = strings.TrimSuffix(message, "\n")
+	_, err = conn.Write([]byte("Message received."))
+	checkErr(err)
 
 	if checkMessageFormat(message) {
-		r := regexp.MustCompile(`^(BOX_[A,D,G])[1,4,7],([0-2]),([0-2]):([1-9])$`)
+		r := regexp.MustCompile(`^(BOX_[A,D,G][1,4,7]),([0-2]),([0-2]):([1-9])$`)
 		matches := r.FindStringSubmatch(message)
 		if strContains(boxMap[myBox.id], matches[1]) {
+			fmt.Println("Value of message: " + message + " is: " + matches[4])
 			val, err := strconv.Atoi(matches[4])
+			fmt.Println(val)
 			checkSoftErr(err)
-			if matches[1] == myBox.id[:len(myBox.id)-1] {
-				y, err := strconv.Atoi(matches[3])
-				checkSoftErr(err)
-				myBox.setColValue(y, val)
-			} else {
+			if matches[1][:len(matches[1])-1] == myBox.id[:len(myBox.id)-1] {
 				x, err := strconv.Atoi(matches[2])
 				checkSoftErr(err)
-				myBox.setRowValue(x, val)
+				myBox.setColValue(x, val)
+			} else {
+				y, err := strconv.Atoi(matches[3])
+				checkSoftErr(err)
+				myBox.setRowValue(y, val)
 			}
 		} else {
-			log.Println("ALERT: STRANGER DANGER!!!")
+			log.Println("ALERT: STRANGER DANGER!!!: " + myBox.id + " -> " + matches[1])
 		}
 	}
-	err := conn.Close()
-	checkErr(err)
 }
