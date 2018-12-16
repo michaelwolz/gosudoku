@@ -18,11 +18,6 @@ func checkSoftErr(err error) {
 	}
 }
 
-func checkMessageFormat(message string) bool {
-	r := regexp.MustCompile(`^BOX_[A,D,G][1,4,7],[0-2],[0-2]:[1-9]$`)
-	return r.MatchString(message)
-}
-
 // Get Local IP Address (https://gist.github.com/jniltinho/9787946)
 func getLocalIP() net.IP {
 	addrs, err := net.InterfaceAddrs()
@@ -56,4 +51,35 @@ func intContains(haystack []int, needle int) bool {
 		}
 	}
 	return false
+}
+
+// Check IP/Port answer from boxManager
+func checkIP(ip *string) bool {
+	r, _ := regexp.Compile(`^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]),[0-9]+$`)
+	return r.MatchString(*ip)
+}
+
+// Map of all neighbors to all boxes
+var neighbors = map[string][]string{
+	"BOX_A1": {"BOX_A4", "BOX_D1"},
+	"BOX_A4": {"BOX_A1", "BOX_A7", "BOX_D4"},
+	"BOX_A7": {"BOX_A4", "BOX_D7"},
+	"BOX_D1": {"BOX_A1", "BOX_D4", "BOX_G1"},
+	"BOX_D4": {"BOX_A4", "BOX_D1", "BOX_D7", "BOX_G4"},
+	"BOX_D7": {"BOX_D4", "BOX_A7", "BOX_G7"},
+	"BOX_G1": {"BOX_D1", "BOX_G4"},
+	"BOX_G4": {"BOX_G1", "BOX_D4", "BOX_G7"},
+	"BOX_G7": {"BOX_G4", "BOX_D7"},
+}
+
+var redirectNeighbors = map[string]map[string]string{
+	"BOX_A1": {},
+	"BOX_A4": {"BOX_A1": "BOX_A7", "BOX_A7": "BOX_A1"},
+	"BOX_A7": {},
+	"BOX_D1": {"BOX_A1": "BOX_G1", "BOX_G1": "BOX_A1"},
+	"BOX_D4": {"BOX_A4": "BOX_G4", "BOX_D1": "BOX_D7"},
+	"BOX_D7": {"BOX_A7": "BOX_G7", "BOX_G7": "BOX_A7"},
+	"BOX_G1": {},
+	"BOX_G4": {"BOX_G1": "BOX_G7", "BOX_G7": "BOX_G1"},
+	"BOX_G7": {},
 }

@@ -1,7 +1,6 @@
 package gosudoku
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -66,12 +65,7 @@ func (b *box) setRowValue(ycoord int, val int) {
 	b.rowValues[ycoord] = append(b.rowValues[ycoord], val)
 	for i := 0; i < 3; i++ {
 		index := ycoord*3 + i
-		delete(b.possibleValues[index], val)
-		// TODO: Why are all map values deleted? (same for setColValues)
-		fmt.Print(myBox.id + ":")
-		fmt.Println(b.possibleValues[index])
-
-		//b.checkAndSet(index)
+		b.removeFromPossibleValues(index, val)
 	}
 }
 
@@ -80,12 +74,7 @@ func (b *box) setColValue(xcoord int, val int) {
 	b.colValues[xcoord] = append(b.colValues[xcoord], val)
 	for i := 0; i < 3; i++ {
 		index := xcoord + i*3
-		delete(b.possibleValues[index], val)
-
-		fmt.Print(myBox.id + ":")
-		fmt.Println(b.possibleValues[index])
-
-		//b.checkAndSet(index)
+		b.removeFromPossibleValues(index, val)
 	}
 }
 
@@ -98,47 +87,36 @@ func (b *box) checkAndSet(index int) {
 			delete(b.possibleValues[index], key)
 		}
 		x, y := getCoordinatesForIndex(index)
-		fmt.Println("ONLY POSSIBLE VALUE FOR: " + strconv.Itoa(x) + "," + strconv.Itoa(y) + " LEFT IS: " + strconv.Itoa(val))
+		log.Println("Setting value at pos: " + strconv.Itoa(index) + " to: " + strconv.Itoa(val))
 		b.values[index] = val
+		b.drawBox()
+		b.removeFromAllPossibleValues(val)
 		sendToNeighbors(x, y, val)
-		// TODO: removeFromPossibleValues
 	}
 }
 
 // Removes value from possible values from all field
-func (b *box) removeFromPossibleValues(val int) {
-	for field := range b.possibleValues {
-		if _, ok := b.possibleValues[field][val]; ok {
-			delete(b.possibleValues[field], val)
-			b.checkAndSet(field)
+func (b *box) removeFromPossibleValues(index, val int) {
+	if b.values[index] == 0 {
+		if _, ok := b.possibleValues[index][val]; ok {
+			/*fmt.Print("Removing "  + strconv.Itoa(val) + " from index " + strconv.Itoa(index) + ": ")
+			fmt.Print(b.possibleValues[index])
+			fmt.Print(" -> ")*/
+			delete(b.possibleValues[index], val)
+			b.checkAndSet(index)
 		}
 	}
 }
 
-// Get row values of local box.
-// row in range [0:2]
-func (b *box) getRow(row int) ([]int, error) {
-	if row < 0 || row > 2 {
-		return nil, errors.New("row number out of range")
+// Removes value from all possible values of myBox
+func (b *box) removeFromAllPossibleValues(val int) {
+	for index := range b.values {
+		b.removeFromPossibleValues(index, val)
 	}
-	return b.values[row*3 : row*3+3], nil
-}
-
-// Get column values of local box
-// col in range [0:2]
-func (b *box) getCol(col int) ([]int, error) {
-	if col < 0 || col > 2 {
-		return nil, errors.New("col number out of range")
-	}
-	colValues := make([]int, 3)
-	for i := 0; i < 3; i++ {
-		colValues[i] = b.values[i*3+col]
-	}
-	return colValues, nil
 }
 
 // Draws box for pretty output
-func (b *box) DrawBox() {
+func (b *box) drawBox() {
 	fmt.Printf("╭─────┬─────┬─────╮\n")
 	fmt.Printf("│  %d  │  %d  │  %d  │\n", b.getFieldValue(0, 0), b.getFieldValue(1, 0), b.getFieldValue(2, 0))
 	fmt.Printf("├─────┼─────┼─────┤\n")
