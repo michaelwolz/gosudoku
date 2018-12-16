@@ -3,22 +3,23 @@ package gosudoku
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"log"
 	"net"
-	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 type TCPConnection struct {
 	conn net.Conn
 	addr string
 	port int
+	name string
 }
 
 var boxManager TCPConnection
 var boxConnections = make(map[string]TCPConnection)
+var sendMutex = &sync.Mutex{}
 
 // Establish initial connection to box manager
 func ConnectToManager(maddress *string, mport *int, lport *int) {
@@ -33,21 +34,19 @@ func ConnectToManager(maddress *string, mport *int, lport *int) {
 	} else {
 		panic(errors.New("connection to boxmanager failed"))
 	}
-	// TODO: Close connection to box manager
 }
 
 // Connect to corresponding Boxes based on myBox
 func connectToBoxes() {
-	for _, boxID := range boxMap[myBox.id] {
+	for _, boxID := range neighbors[myBox.id] {
 		reply := boxManager.sendMessage(boxID)
 		if checkIP(&reply) {
-			log.Println("IP address of " + boxID + " is: " + reply)
 			addr := strings.Split(reply, ",")
 			port, err := strconv.Atoi(addr[1])
 			if err != nil {
 				panic(err)
 			}
-			boxConnections[boxID] = connectToBox(addr[0], port)
+			boxConnections[boxID] = connectToBox(addr[0], port, boxID)
 		} else {
 			log.Println("malformed ip address")
 		}
@@ -55,10 +54,11 @@ func connectToBoxes() {
 }
 
 // Connect to Box
-func connectToBox(addr string, port int) TCPConnection {
+func connectToBox(addr string, port int, name string) TCPConnection {
 	var connection TCPConnection
 	connection.addr = addr
 	connection.port = port
+	connection.name = name
 	connection.connect()
 	return connection
 }
@@ -69,8 +69,8 @@ func sendInitialConfig() {
 		for key, val := range myBox.values {
 			if val != 0 {
 				x, y := getCoordinatesForIndex(key)
-				reply := box.sendMessage(myBox.id + "," + strconv.Itoa(x) + "," + strconv.Itoa(y) + ":" + strconv.Itoa(val))
-				fmt.Println(reply)
+				//log.Println("sendInitialConfig(): " + myBox.id + " sending " + strconv.Itoa(x) + "," + strconv.Itoa(y) + ":" + strconv.Itoa(val) + " to " + box.name)
+				box.sendMessage(myBox.id + "," + strconv.Itoa(x) + "," + strconv.Itoa(y) + ":" + strconv.Itoa(val))
 			}
 		}
 	}
@@ -79,15 +79,20 @@ func sendInitialConfig() {
 // Sends message with value to all neighbors
 func sendToNeighbors(x, y, val int) {
 	for _, neighbor := range boxConnections {
-		reply := neighbor.sendMessage(myBox.id + "," + strconv.Itoa(x) + "," + strconv.Itoa(y) + ":" + strconv.Itoa(val))
-		fmt.Println(reply)
+		//log.Println("sendToNeighbors(): " + myBox.id + " sending " + strconv.Itoa(x) + "," + strconv.Itoa(y) + ":" + strconv.Itoa(val) + " to " + neighbor.name)
+		neighbor.sendMessage(myBox.id + "," + strconv.Itoa(x) + "," + strconv.Itoa(y) + ":" + strconv.Itoa(val))
 	}
 }
 
-// Check IP/Port answer from boxManager
-func checkIP(ip *string) bool {
-	r, _ := regexp.Compile(`^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]),[0-9]+$`)
-	return r.MatchString(*ip)
+// Redirects an incoming message to other boxes which are influenced by the sender e.g. A1 -> G7
+func redirectToNeighbor(message string, sender string) {
+	if _, ok := redirectNeighbors[myBox.id][sender]; ok {
+		for _, conn := range boxConnections {
+			if conn.name == redirectNeighbors[myBox.id][sender] {
+				conn.sendMessage(message)
+			}
+		}
+	}
 }
 
 // Connect to a TCP-Server
@@ -101,12 +106,13 @@ func (t *TCPConnection) connect() {
 
 // Send message via TCP
 func (t *TCPConnection) sendMessage(message string) string {
+	sendMutex.Lock()
 	_, err := t.conn.Write([]byte(message + "\n"))
 	checkErr(err)
 
 	reply, err := bufio.NewReader(t.conn).ReadString('\n')
 	checkErr(err)
-
+	sendMutex.Unlock()
 	return strings.TrimSuffix(reply, "\n")
 }
 
@@ -131,37 +137,19 @@ func LaunchTCPServer(port *int) {
 	}()
 }
 
-// TODO: unblock connection
 // Handle TCP requests from box manager
 func handleTCPRequest(conn net.Conn) {
 	var message string
 	var err error
 
-	// Will listen for message to process ending in newline (\n)
-	message, err = bufio.NewReader(conn).ReadString('\n')
-	message = strings.TrimSuffix(message, "\n")
-	_, err = conn.Write([]byte("Message received."))
-	checkErr(err)
+	for {
+		message, err = bufio.NewReader(conn).ReadString('\n')
+		message = strings.TrimSuffix(message, "\n")
+		checkErr(err)
 
-	if checkMessageFormat(message) {
-		r := regexp.MustCompile(`^(BOX_[A,D,G][1,4,7]),([0-2]),([0-2]):([1-9])$`)
-		matches := r.FindStringSubmatch(message)
-		if strContains(boxMap[myBox.id], matches[1]) {
-			fmt.Println("Value of message: " + message + " is: " + matches[4])
-			val, err := strconv.Atoi(matches[4])
-			fmt.Println(val)
-			checkSoftErr(err)
-			if matches[1][:len(matches[1])-1] == myBox.id[:len(myBox.id)-1] {
-				x, err := strconv.Atoi(matches[2])
-				checkSoftErr(err)
-				myBox.setColValue(x, val)
-			} else {
-				y, err := strconv.Atoi(matches[3])
-				checkSoftErr(err)
-				myBox.setRowValue(y, val)
-			}
-		} else {
-			log.Println("ALERT: STRANGER DANGER!!!: " + myBox.id + " -> " + matches[1])
-		}
+		go processMessage(message)
+
+		_, err = conn.Write([]byte("message received\n"))
+		checkErr(err)
 	}
 }
