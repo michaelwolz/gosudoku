@@ -33,16 +33,6 @@ func getLocalIP() net.IP {
 	return nil
 }
 
-// Check if string array strContains specific string
-func strContains(haystack []string, needle string) bool {
-	for _, x := range haystack {
-		if x == needle {
-			return true
-		}
-	}
-	return false
-}
-
 // Check if int array strContains specific int
 func intContains(haystack []int, needle int) bool {
 	for _, x := range haystack {

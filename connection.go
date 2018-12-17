@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type TCPConnection struct {
@@ -20,13 +21,14 @@ type TCPConnection struct {
 var boxManager TCPConnection
 var boxConnections = make(map[string]TCPConnection)
 var sendMutex = &sync.Mutex{}
+var Done = make(chan int)
 
 // Establish initial connection to box manager
 func ConnectToManager(maddress *string, mport *int, lport *int) {
 	boxManager.addr = *maddress
 	boxManager.port = *mport
 	boxManager.connect()
-	reply := boxManager.sendMessage(myBox.id + "," + getLocalIP().String() + "," + strconv.Itoa(*lport))
+	reply := boxManager.sendMessage(myBox.id+","+getLocalIP().String()+","+strconv.Itoa(*lport), true)
 	if reply == "OK" {
 		log.Println("connected to boxmanager.")
 		connectToBoxes()
@@ -39,7 +41,7 @@ func ConnectToManager(maddress *string, mport *int, lport *int) {
 // Connect to corresponding Boxes based on myBox
 func connectToBoxes() {
 	for _, boxID := range neighbors[myBox.id] {
-		reply := boxManager.sendMessage(boxID)
+		reply := boxManager.sendMessage(boxID, true)
 		if checkIP(&reply) {
 			addr := strings.Split(reply, ",")
 			port, err := strconv.Atoi(addr[1])
@@ -69,8 +71,7 @@ func sendInitialConfig() {
 		for key, val := range myBox.values {
 			if val != 0 {
 				x, y := getCoordinatesForIndex(key)
-				//log.Println("sendInitialConfig(): " + myBox.id + " sending " + strconv.Itoa(x) + "," + strconv.Itoa(y) + ":" + strconv.Itoa(val) + " to " + box.name)
-				box.sendMessage(myBox.id + "," + strconv.Itoa(x) + "," + strconv.Itoa(y) + ":" + strconv.Itoa(val))
+				box.sendMessage(myBox.id+","+strconv.Itoa(x)+","+strconv.Itoa(y)+":"+strconv.Itoa(val), false)
 			}
 		}
 	}
@@ -79,8 +80,7 @@ func sendInitialConfig() {
 // Sends message with value to all neighbors
 func sendToNeighbors(x, y, val int) {
 	for _, neighbor := range boxConnections {
-		//log.Println("sendToNeighbors(): " + myBox.id + " sending " + strconv.Itoa(x) + "," + strconv.Itoa(y) + ":" + strconv.Itoa(val) + " to " + neighbor.name)
-		neighbor.sendMessage(myBox.id + "," + strconv.Itoa(x) + "," + strconv.Itoa(y) + ":" + strconv.Itoa(val))
+		neighbor.sendMessage(myBox.id+","+strconv.Itoa(x)+","+strconv.Itoa(y)+":"+strconv.Itoa(val), false)
 	}
 }
 
@@ -89,7 +89,7 @@ func redirectToNeighbor(message string, sender string) {
 	if _, ok := redirectNeighbors[myBox.id][sender]; ok {
 		for _, conn := range boxConnections {
 			if conn.name == redirectNeighbors[myBox.id][sender] {
-				conn.sendMessage(message)
+				conn.sendMessage(message, false)
 			}
 		}
 	}
@@ -105,15 +105,22 @@ func (t *TCPConnection) connect() {
 }
 
 // Send message via TCP
-func (t *TCPConnection) sendMessage(message string) string {
-	sendMutex.Lock()
+func (t *TCPConnection) sendMessage(message string, expectReply bool) string {
+	sendMutex.Lock() // Locking send message, so that two messages aren't send at the same time
 	_, err := t.conn.Write([]byte(message + "\n"))
 	checkErr(err)
 
-	reply, err := bufio.NewReader(t.conn).ReadString('\n')
-	checkErr(err)
+	var reply string
+	if expectReply {
+		// TODO: Add timeout!
+		reply, err = bufio.NewReader(t.conn).ReadString('\n')
+		reply = strings.TrimSuffix(reply, "\n")
+		checkErr(err)
+	}
+
+	time.Sleep(10 * time.Millisecond)
 	sendMutex.Unlock()
-	return strings.TrimSuffix(reply, "\n")
+	return reply
 }
 
 // Launching a TCP Server on given port number.
