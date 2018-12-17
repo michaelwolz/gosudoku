@@ -53,7 +53,7 @@ func main() {
 	gosudoku.LaunchTCPServer(&lport)
 	gosudoku.ConnectToManager(&managerAddress, &mport, &lport)
 
-	select {}
+	<-gosudoku.Done
 }
 
 // Reads field configuration from input file

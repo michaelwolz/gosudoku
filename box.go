@@ -10,9 +10,11 @@ import (
 type box struct {
 	id             string
 	values         [9]int
+	setValues      int
 	possibleValues [9]map[int]struct{}
 	rowValues      [3][]int // Stores all values which are set in a whole row (includes values from other boxConnections)
 	colValues      [3][]int // Stores all values which are set in a whole column (includes values from other boxConnections)
+	boxFinished    bool
 }
 
 // Initializes the field configuration from a given string
@@ -28,6 +30,7 @@ func (b *box) initializeBox(boxID *string, fieldString string) {
 		v, err := strconv.Atoi(string(el[3]))
 		checkErr(err)
 		b.setFieldValue(x, y, v)
+		b.setValues += 1
 	}
 
 	// Set initial possible values
@@ -89,9 +92,15 @@ func (b *box) checkAndSet(index int) {
 		x, y := getCoordinatesForIndex(index)
 		log.Println("Setting value at pos: " + strconv.Itoa(index) + " to: " + strconv.Itoa(val))
 		b.values[index] = val
-		b.drawBox()
+		b.setValues += 1
 		b.removeFromAllPossibleValues(val)
 		sendToNeighbors(x, y, val)
+		if !b.boxFinished && b.completed() {
+			b.boxFinished = true
+			log.Println("Box is finished.")
+			b.drawBox()
+			b.sendResult()
+		}
 	}
 }
 
@@ -99,9 +108,6 @@ func (b *box) checkAndSet(index int) {
 func (b *box) removeFromPossibleValues(index, val int) {
 	if b.values[index] == 0 {
 		if _, ok := b.possibleValues[index][val]; ok {
-			/*fmt.Print("Removing "  + strconv.Itoa(val) + " from index " + strconv.Itoa(index) + ": ")
-			fmt.Print(b.possibleValues[index])
-			fmt.Print(" -> ")*/
 			delete(b.possibleValues[index], val)
 			b.checkAndSet(index)
 		}
@@ -113,6 +119,21 @@ func (b *box) removeFromAllPossibleValues(val int) {
 	for index := range b.values {
 		b.removeFromPossibleValues(index, val)
 	}
+}
+
+// checks if box is filled out completely
+func (b *box) completed() bool {
+	return b.setValues == 9
+}
+
+// Sends result to boxmanager
+func (b *box) sendResult() {
+	var resultString string
+	for index := range b.values {
+		resultString += strconv.Itoa(b.values[index])
+	}
+	log.Println("Sending result to boxmanager...")
+	boxManager.sendMessage("RESULT,"+b.id+","+resultString, false)
 }
 
 // Draws box for pretty output
