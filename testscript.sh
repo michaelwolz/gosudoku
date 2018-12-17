@@ -1,6 +1,6 @@
 #!/bin/sh
 
-screen -dmS boxmanager java -jar /Users/michaelwolz/work/university_trier/Komponententechnologien/SudokuSolverTCP/BoxManager.jar 4242
+screen -dmS boxmanager java -jar /home/michaelwolz/Dokumente/Komponententechnologien/SudokuSolverTCP/BoxManager.jar 4242
 screen -dmS field1 go run cmd/sudokuSolver/sudokuSolver.go -boxID=BOX_A1 -maddress=127.0.0.1 -mport=4242 -lport=1330 -input=./example/sudoku1.txt
 screen -dmS field2 go run cmd/sudokuSolver/sudokuSolver.go -boxID=BOX_D1 -maddress=127.0.0.1 -mport=4242 -lport=1331 -input=./example/sudoku2.txt
 screen -dmS field3 go run cmd/sudokuSolver/sudokuSolver.go -boxID=BOX_G1 -maddress=127.0.0.1 -mport=4242 -lport=1332 -input=./example/sudoku3.txt

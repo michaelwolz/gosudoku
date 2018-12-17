@@ -119,6 +119,7 @@ func (t *TCPConnection) sendMessage(message string) string {
 // Launching a TCP Server on given port number.
 // It handles all incoming request from other boxConnections
 func LaunchTCPServer(port *int) {
+	go processMessages() // Starts worker for processing incoming messages
 	go func() {
 		log.Println("Launching TCP Server")
 
@@ -137,19 +138,13 @@ func LaunchTCPServer(port *int) {
 	}()
 }
 
-// Handle TCP requests from box manager
+// Handle TCP requests from box manager and put incoming messages in the message queue
 func handleTCPRequest(conn net.Conn) {
 	var message string
-	var err error
 
 	for {
-		message, err = bufio.NewReader(conn).ReadString('\n')
-		message = strings.TrimSuffix(message, "\n")
-		checkErr(err)
-
-		go processMessage(message)
-
-		_, err = conn.Write([]byte("message received\n"))
-		checkErr(err)
+		message, _ = bufio.NewReader(conn).ReadString('\n')
+		msgChan <- message
+		conn.Write([]byte("OK\n"))
 	}
 }
