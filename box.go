@@ -130,8 +130,9 @@ func (b *box) completed() bool {
 func (b *box) sendResult() {
 	var resultString string
 	for index := range b.values {
-		resultString += strconv.Itoa(b.values[index])
+		resultString += strconv.Itoa(b.values[index]) + ","
 	}
+	resultString = resultString[:len(resultString)-1]
 	log.Println("Sending result to boxmanager...")
 	boxManager.sendMessage("RESULT,"+b.id+","+resultString, false)
 }
