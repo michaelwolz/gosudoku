@@ -8,6 +8,10 @@ Der SudokuSolver kommuniziert über den Telegram Messenger. Hierzu wird für jed
 indem sie dem Kommando: /fieldconfig ihre aktuelle Feldkonfiguration anfügen. Das /fieldconfig Kommando wird 
 anschließend von den anderen Bots innerhalb der Gruppe gelesen und verarbeitet.
 
+Für die Schnittstelle mit Camel wird ein weiterer Bot benötigt. Diesen stellt @TrierSudokuSolverBot 
+(https://t.me/TrierSudokuSolverBot) dar. Die Camel Komponente benötigt lediglich den Telegram-Token und muss das 
+Kommando /fieldconfig verarbeiten bzw. senden. Die Formatkonvertierung wird durch die Camel-Komponente realisiert.
+
 ## Nachrichtenformat
 
 Im Unterschied zur Variante mittels TCP versteht der Bot auch Nachrichten, welche die gesamte 
