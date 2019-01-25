@@ -1,10 +1,23 @@
-# Telegram-SudokuSolver Specification
+# Telegram-SudokuSolver Spezifikation
 
-## Communication
+## Kommunikation
 
-The sudoku-solver communicates via a Telegram Bot. Messages can be sent to the bot and will be redirected to all other instances of the sovler. 
+Der SudokuSolver kommuniziert über den Telegram Messenger. Hierzu wird für jede Instanz ein Telegram-Bot angelegt.
+"TSSB1Bot" - "TSSB9Bot". Alle Bots befinden sich in der Gruppe "TrierSudokuSolvingGroup" 
+(https://t.me/joinchat/HfzFUQ4h8PD3K3SoOhR5oA). Die Bots können dabei Nachrichten untereinander austauschen, 
+indem sie dem Kommando: /fieldconfig ihre aktuelle Feldkonfiguration anfügen. Das /fieldconfig Kommando wird 
+anschließend von den anderen Bots innerhalb der Gruppe gelesen und verarbeitet.
 
-## Message Format
+## Nachrichtenformat
 
-The message format is a base64 encoded string which contains the boxname, the relative coordinate of the field and the value e.g.:
-- BOX_D4,0,1:7 => Qk9YX0Q0LDAsMTo3
+Im Unterschied zur Variante mittels TCP versteht der Bot auch Nachrichten, welche die gesamte 
+Feldkonfiguration enthalten. Das Format ist dabei das gleiche, wie es bei der Initialisierung verwendet wird,
+mit dem Zusatz, dass der Boxname als Präfix angefügt wird. Dies hat den Vorteil, dass weniger Nachrichten 
+gesendet werden müssen und es nicht zu einer Überflutung des Chats kommt.
+
+Format: BOX_XX,xy:value - Beispiel: BOX_A1,20:2,11:9
+
+## Ergebnis
+
+Sobald eine Box fertig ist, sendet sie ein letztes Mal die aktuelle Feldkonfiguration mittels: /fieldconfig. 
+Anschließend wird das Kommando /finish in die Gruppe gesendet und der Inhalt der Box ausgegeben. 

@@ -89,12 +89,12 @@ func (b *box) checkAndSet(index int) {
 			val = key
 			delete(b.possibleValues[index], key)
 		}
-		x, y := getCoordinatesForIndex(index)
+		//x, y := getCoordinatesForIndex(index)
 		log.Println("Setting value at pos: " + strconv.Itoa(index) + " to: " + strconv.Itoa(val))
 		b.values[index] = val
 		b.setValues += 1
 		b.removeFromAllPossibleValues(val)
-		sendToNeighbors(x, y, val)
+		//sendToNeighbors(x, y, val)
 		if !b.boxFinished && b.completed() {
 			b.boxFinished = true
 			log.Println("Box is finished.")
@@ -134,7 +134,7 @@ func (b *box) sendResult() {
 	}
 	resultString = resultString[:len(resultString)-1]
 	log.Println("Sending result to boxmanager...")
-	boxManager.sendMessage("RESULT,"+b.id+","+resultString, false)
+	//boxManager.sendMessage("RESULT,"+b.id+","+resultString, false)
 }
 
 // Draws box for pretty output
