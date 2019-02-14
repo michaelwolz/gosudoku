@@ -1,17 +1,21 @@
 package gosudoku
 
 import (
-	"fmt"
 	"github.com/yanzay/tbot"
 	"log"
+	"regexp"
 	"strconv"
+	"strings"
 )
 
-const GROUPID = -237105392
+const GROUPID = -237105392 // GROUP CHAT ID
+
+var foreignBoxRegEx = regexp.MustCompile(`^(BOX_[A,D,G][1,4,7]),(([0-2][0-2]:[1-9],?)+)$`)
 
 var bot *tbot.Server
 
-var connected = make(chan bool)
+var connectedCh = make(chan bool)
+var connected = false
 
 func StartTelegramBot(token string) {
 	var err error
@@ -25,12 +29,13 @@ func StartTelegramBot(token string) {
 	bot.HandleFunc("/fieldconfig {fieldconfig}", FieldConfigHandler)
 	bot.HandleDefault(DefaultHandler)
 
+	err = bot.ListenAndServe()
+	checkErr(err)
+
 	err = bot.Send(GROUPID, "Let's get this puzzle solved ;)")
 	checkErr(err)
 
-	connected <- true
-	err = bot.ListenAndServe()
-	checkErr(err)
+	connectedCh <- true
 }
 
 func FieldConfigHandler(message *tbot.Message) {
@@ -48,7 +53,11 @@ func sendMessage(message string) {
 }
 
 func sendFieldConfiguration() {
-	<-connected
+	if !connected {
+		<-connectedCh // Wait until Server is started
+		connected = true
+	}
+
 	conf := myBox.id
 	for key, val := range myBox.values {
 		if val != 0 {
@@ -60,5 +69,36 @@ func sendFieldConfiguration() {
 }
 
 func readFieldConfiguration(fieldConfig string) {
-	fmt.Println(fieldConfig)
+	var isColumn = false
+	var isRow = false
+
+	if foreignBoxRegEx.MatchString(fieldConfig) {
+		matches := foreignBoxRegEx.FindStringSubmatch(fieldConfig)
+		foreignBoxID := matches[1]
+		config := strings.Split(matches[2], ",")
+
+		log.Println("Received fieldConfiguration from " + foreignBoxID)
+
+		if foreignBoxID[:len(matches[1])-1] == myBox.id[:len(myBox.id)-1] {
+			isColumn = true
+		} else if foreignBoxID[len(matches[1])-1:] == myBox.id[len(myBox.id)-1:] {
+			isRow = true
+		}
+
+		if isRow || isColumn { // Otherwise it's a box which doesn't affect us.
+			for _, el := range config {
+				x, y, v := readFieldConfigStr(el)
+				if isColumn {
+					myBox.setColValue(x, v)
+				} else {
+					myBox.setRowValue(y, v)
+				}
+			}
+		}
+	}
+}
+
+func drawResultBox() {
+	err := bot.Send(GROUPID, myBox.getResultBoxString())
+	checkSoftErr(err)
 }

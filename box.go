@@ -19,16 +19,12 @@ type box struct {
 
 // Initializes the field configuration from a given string
 // Format: xy:v with x between 0 and 2 (column) and y between 0 and 2 (row) and value v, separated by comma
-// TODO: Add error handling for malformed field configurations
 func (b *box) initializeBox(boxID *string, fieldString string) {
 	b.id = *boxID
 	log.Println("Reading input configuration...")
 	config := strings.Split(fieldString, ",")
 	for _, el := range config {
-		x, err := strconv.Atoi(string(el[0]))
-		y, err := strconv.Atoi(string(el[1]))
-		v, err := strconv.Atoi(string(el[3]))
-		checkErr(err)
+		x, y, v := readFieldConfigStr(el)
 		b.setFieldValue(x, y, v)
 		b.setValues += 1
 	}
@@ -94,12 +90,11 @@ func (b *box) checkAndSet(index int) {
 		b.values[index] = val
 		b.setValues += 1
 		b.removeFromAllPossibleValues(val)
-		//sendToNeighbors(x, y, val)
+		sendFieldConfiguration()
 		if !b.boxFinished && b.completed() {
 			b.boxFinished = true
 			log.Println("Box is finished.")
-			b.drawBox()
-			b.sendResult()
+			drawResultBox()
 		}
 	}
 }
@@ -146,4 +141,16 @@ func (b *box) drawBox() {
 	fmt.Printf("├─────┼─────┼─────┤\n")
 	fmt.Printf("│  %d  │  %d  │  %d  │\n", b.getFieldValue(0, 2), b.getFieldValue(1, 2), b.getFieldValue(2, 2))
 	fmt.Printf("╰─────┴─────┴─────╯\n")
+}
+
+func (b *box) getResultBoxString() string {
+	var result string
+	result = fmt.Sprintf("╭─────┬─────┬─────╮\n")
+	result += fmt.Sprintf("│  %d  │  %d  │  %d  │\n", b.getFieldValue(0, 0), b.getFieldValue(1, 0), b.getFieldValue(2, 0))
+	result += fmt.Sprintf("├─────┼─────┼─────┤\n")
+	result += fmt.Sprintf("│  %d  │  %d  │  %d  │\n", b.getFieldValue(0, 1), b.getFieldValue(1, 1), b.getFieldValue(2, 1))
+	result += fmt.Sprintf("├─────┼─────┼─────┤\n")
+	result += fmt.Sprintf("│  %d  │  %d  │  %d  │\n", b.getFieldValue(0, 2), b.getFieldValue(1, 2), b.getFieldValue(2, 2))
+	result += fmt.Sprintf("╰─────┴─────┴─────╯\n")
+	return result
 }

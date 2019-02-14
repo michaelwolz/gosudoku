@@ -16,13 +16,15 @@ var (
 	mport          int
 )
 
+var Done = make(chan int)
+
 // Initializes flag configuration
 func init() {
 	flag.StringVar(&inputFile, "input", "", "Input Sudoku field as .txt")
 	flag.StringVar(&boxID, "boxID", "", "Box Number")
 	flag.IntVar(&mport, "mport", -1, "Manager port")
 	flag.StringVar(&managerAddress, "maddress", "127.0.0.1", "Address of the box manager")
-	flag.StringVar(&telegramToken, "telegramtoken", "", "Token of the Telgram Bot")
+	flag.StringVar(&telegramToken, "telegramtoken", "", "Token of the Telegram Bot")
 }
 
 // Usage: sudokuSolver -input={INPUTFILE} -telegramtoken={TOKEN} -maddress={MANAGERADDRESS} -mport={MANAGERPORT} -boxID={BOXNUMBER}
@@ -52,7 +54,7 @@ func main() {
 	go gosudoku.StartTelegramBot(telegramToken)
 	gosudoku.InitializeSudoku(readFile(inputFile), &boxID)
 
-	<-gosudoku.Done
+	<-Done
 }
 
 // Reads field configuration from input file
