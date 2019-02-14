@@ -2,6 +2,7 @@ package gosudoku
 
 import (
 	"log"
+	"strconv"
 )
 
 func checkErr(err error) {
@@ -24,4 +25,13 @@ func intContains(haystack []int, needle int) bool {
 		}
 	}
 	return false
+}
+
+// Returns x,y-Coordinates and value from a fieldConfig-String
+func readFieldConfigStr(config string) (int, int, int) {
+	x, err := strconv.Atoi(string(config[0]))
+	y, err := strconv.Atoi(string(config[1]))
+	v, err := strconv.Atoi(string(config[3]))
+	checkSoftErr(err)
+	return x, y, v
 }
