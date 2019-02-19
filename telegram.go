@@ -5,17 +5,18 @@ import (
 	"log"
 	"regexp"
 	"strconv"
-	"strings"
 )
 
-const GROUPID = -237105392 // GROUP CHAT ID
+const GROUPID = -1001457965485 // CHANNEL ID
 
-var foreignBoxRegEx = regexp.MustCompile(`^(BOX_[A,D,G][1,4,7]),(([0-2][0-2]:[1-9],?)+)$`)
+var foreignBoxRegEx = regexp.MustCompile(`^(BOX_[A,D,G][1,4,7]),([0-2]),([0-2]):([1-9])$`)
 
 var bot *tbot.Server
 
 var connectedCh = make(chan bool)
+var startCh = make(chan bool)
 var connected = false
+var start = false
 
 func StartTelegramBot(token string) {
 	var err error
@@ -27,15 +28,13 @@ func StartTelegramBot(token string) {
 	checkErr(err)
 
 	bot.HandleFunc("/fieldconfig {fieldconfig}", FieldConfigHandler)
-	bot.HandleDefault(DefaultHandler)
+	bot.HandleFunc("/solve", StartHandler)
+	//bot.HandleDefault(DefaultHandler)
+
+	connectedCh <- true
 
 	err = bot.ListenAndServe()
 	checkErr(err)
-
-	err = bot.Send(GROUPID, "Let's get this puzzle solved ;)")
-	checkErr(err)
-
-	connectedCh <- true
 }
 
 func FieldConfigHandler(message *tbot.Message) {
@@ -43,8 +42,10 @@ func FieldConfigHandler(message *tbot.Message) {
 	readFieldConfiguration(fieldConfig)
 }
 
-func DefaultHandler(message *tbot.Message) {
-	message.Reply("I don't know, what you want from me :(")
+func StartHandler(message *tbot.Message) {
+	log.Println("Start solving Sudoku...")
+	start = true
+	startCh <- true
 }
 
 func sendMessage(message string) {
@@ -55,43 +56,51 @@ func sendMessage(message string) {
 func sendFieldConfiguration() {
 	if !connected {
 		<-connectedCh // Wait until Server is started
+		<-startCh     // Wait for start signal
 		connected = true
 	}
 
-	conf := myBox.id
 	for key, val := range myBox.values {
 		if val != 0 {
 			x, y := getCoordinatesForIndex(key)
-			conf += "," + strconv.Itoa(x) + strconv.Itoa(y) + ":" + strconv.Itoa(val)
+			sendMessage("/fieldconfig " + myBox.id + "," + strconv.Itoa(x) + "," + strconv.Itoa(y) + ":" + strconv.Itoa(val))
 		}
 	}
-	sendMessage("/fieldconfig " + conf)
+
+}
+
+func sendUpdate(x, y, val int) {
+	sendMessage("/fieldconfig " + myBox.id + "," + strconv.Itoa(x) + "," + strconv.Itoa(y) + ":" + strconv.Itoa(val))
 }
 
 func readFieldConfiguration(fieldConfig string) {
-	var isColumn = false
-	var isRow = false
+	if start {
+		var isColumn = false
+		var isRow = false
 
-	if foreignBoxRegEx.MatchString(fieldConfig) {
-		matches := foreignBoxRegEx.FindStringSubmatch(fieldConfig)
-		foreignBoxID := matches[1]
-		config := strings.Split(matches[2], ",")
+		if foreignBoxRegEx.MatchString(fieldConfig) {
+			matches := foreignBoxRegEx.FindStringSubmatch(fieldConfig)
+			foreignBoxID := matches[1]
 
-		log.Println("Received fieldConfiguration from " + foreignBoxID)
+			log.Println("Received fieldConfiguration from " + foreignBoxID)
 
-		if foreignBoxID[:len(matches[1])-1] == myBox.id[:len(myBox.id)-1] {
-			isColumn = true
-		} else if foreignBoxID[len(matches[1])-1:] == myBox.id[len(myBox.id)-1:] {
-			isRow = true
-		}
+			if foreignBoxID[:len(matches[1])-1] == myBox.id[:len(myBox.id)-1] {
+				isColumn = true
+			} else if foreignBoxID[len(matches[1])-1:] == myBox.id[len(myBox.id)-1:] {
+				isRow = true
+			}
 
-		if isRow || isColumn { // Otherwise it's a box which doesn't affect us.
-			for _, el := range config {
-				x, y, v := readFieldConfigStr(el)
+			if isRow || isColumn { // Otherwise it's a box which doesn't affect us.
+				val, err := strconv.Atoi(matches[4])
+				checkErr(err)
 				if isColumn {
-					myBox.setColValue(x, v)
+					x, err := strconv.Atoi(matches[2])
+					checkSoftErr(err)
+					myBox.setColValue(x, val)
 				} else {
-					myBox.setRowValue(y, v)
+					y, err := strconv.Atoi(matches[3])
+					checkSoftErr(err)
+					myBox.setRowValue(y, val)
 				}
 			}
 		}

@@ -54,7 +54,7 @@ func main() {
 	go gosudoku.StartTelegramBot(telegramToken)
 	gosudoku.InitializeSudoku(readFile(inputFile), &boxID)
 
-	<-Done
+	<-gosudoku.Done
 }
 
 // Reads field configuration from input file
