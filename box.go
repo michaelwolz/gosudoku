@@ -17,6 +17,8 @@ type box struct {
 	boxFinished    bool
 }
 
+var Done = make(chan int)
+
 // Initializes the field configuration from a given string
 // Format: xy:v with x between 0 and 2 (column) and y between 0 and 2 (row) and value v, separated by comma
 func (b *box) initializeBox(boxID *string, fieldString string) {
@@ -85,16 +87,17 @@ func (b *box) checkAndSet(index int) {
 			val = key
 			delete(b.possibleValues[index], key)
 		}
-		//x, y := getCoordinatesForIndex(index)
 		log.Println("Setting value at pos: " + strconv.Itoa(index) + " to: " + strconv.Itoa(val))
 		b.values[index] = val
 		b.setValues += 1
 		b.removeFromAllPossibleValues(val)
-		sendFieldConfiguration()
+		x, y := getCoordinatesForIndex(index)
+		sendUpdate(x, y, val)
 		if !b.boxFinished && b.completed() {
 			b.boxFinished = true
 			log.Println("Box is finished.")
 			drawResultBox()
+			Done <- 1
 		}
 	}
 }
@@ -121,36 +124,16 @@ func (b *box) completed() bool {
 	return b.setValues == 9
 }
 
-// Sends result to boxmanager
-func (b *box) sendResult() {
-	var resultString string
-	for index := range b.values {
-		resultString += strconv.Itoa(b.values[index]) + ","
-	}
-	resultString = resultString[:len(resultString)-1]
-	log.Println("Sending result to boxmanager...")
-	//boxManager.sendMessage("RESULT,"+b.id+","+resultString, false)
-}
-
 // Draws box for pretty output
-func (b *box) drawBox() {
-	fmt.Printf("╭─────┬─────┬─────╮\n")
-	fmt.Printf("│  %d  │  %d  │  %d  │\n", b.getFieldValue(0, 0), b.getFieldValue(1, 0), b.getFieldValue(2, 0))
-	fmt.Printf("├─────┼─────┼─────┤\n")
-	fmt.Printf("│  %d  │  %d  │  %d  │\n", b.getFieldValue(0, 1), b.getFieldValue(1, 1), b.getFieldValue(2, 1))
-	fmt.Printf("├─────┼─────┼─────┤\n")
-	fmt.Printf("│  %d  │  %d  │  %d  │\n", b.getFieldValue(0, 2), b.getFieldValue(1, 2), b.getFieldValue(2, 2))
-	fmt.Printf("╰─────┴─────┴─────╯\n")
-}
-
 func (b *box) getResultBoxString() string {
 	var result string
+	result = fmt.Sprintf("%s:\n", b.id)
 	result = fmt.Sprintf("╭─────┬─────┬─────╮\n")
-	result += fmt.Sprintf("│  %d  │  %d  │  %d  │\n", b.getFieldValue(0, 0), b.getFieldValue(1, 0), b.getFieldValue(2, 0))
+	result += fmt.Sprintf("│     %d     │     %d     │     %d     │\n", b.getFieldValue(0, 0), b.getFieldValue(1, 0), b.getFieldValue(2, 0))
 	result += fmt.Sprintf("├─────┼─────┼─────┤\n")
-	result += fmt.Sprintf("│  %d  │  %d  │  %d  │\n", b.getFieldValue(0, 1), b.getFieldValue(1, 1), b.getFieldValue(2, 1))
+	result += fmt.Sprintf("│     %d     │     %d     │     %d     │\n", b.getFieldValue(0, 1), b.getFieldValue(1, 1), b.getFieldValue(2, 1))
 	result += fmt.Sprintf("├─────┼─────┼─────┤\n")
-	result += fmt.Sprintf("│  %d  │  %d  │  %d  │\n", b.getFieldValue(0, 2), b.getFieldValue(1, 2), b.getFieldValue(2, 2))
+	result += fmt.Sprintf("│     %d     │     %d     │     %d     │\n", b.getFieldValue(0, 2), b.getFieldValue(1, 2), b.getFieldValue(2, 2))
 	result += fmt.Sprintf("╰─────┴─────┴─────╯\n")
 	return result
 }
