@@ -17,18 +17,16 @@ type box struct {
 	boxFinished    bool
 }
 
+var Done = make(chan int)
+
 // Initializes the field configuration from a given string
 // Format: xy:v with x between 0 and 2 (column) and y between 0 and 2 (row) and value v, separated by comma
-// TODO: Add error handling for malformed field configurations
 func (b *box) initializeBox(boxID *string, fieldString string) {
 	b.id = *boxID
 	log.Println("Reading input configuration...")
 	config := strings.Split(fieldString, ",")
 	for _, el := range config {
-		x, err := strconv.Atoi(string(el[0]))
-		y, err := strconv.Atoi(string(el[1]))
-		v, err := strconv.Atoi(string(el[3]))
-		checkErr(err)
+		x, y, v := readFieldConfigStr(el)
 		b.setFieldValue(x, y, v)
 		b.setValues += 1
 	}
@@ -89,17 +87,17 @@ func (b *box) checkAndSet(index int) {
 			val = key
 			delete(b.possibleValues[index], key)
 		}
-		x, y := getCoordinatesForIndex(index)
 		log.Println("Setting value at pos: " + strconv.Itoa(index) + " to: " + strconv.Itoa(val))
 		b.values[index] = val
 		b.setValues += 1
 		b.removeFromAllPossibleValues(val)
-		sendToNeighbors(x, y, val)
+		x, y := getCoordinatesForIndex(index)
+		sendUpdate(x, y, val)
 		if !b.boxFinished && b.completed() {
 			b.boxFinished = true
 			log.Println("Box is finished.")
-			b.drawBox()
-			b.sendResult()
+			drawResultBox()
+			Done <- 1
 		}
 	}
 }
@@ -126,24 +124,16 @@ func (b *box) completed() bool {
 	return b.setValues == 9
 }
 
-// Sends result to boxmanager
-func (b *box) sendResult() {
-	var resultString string
-	for index := range b.values {
-		resultString += strconv.Itoa(b.values[index]) + ","
-	}
-	resultString = resultString[:len(resultString)-1]
-	log.Println("Sending result to boxmanager...")
-	boxManager.sendMessage("RESULT,"+b.id+","+resultString, false)
-}
-
 // Draws box for pretty output
-func (b *box) drawBox() {
-	fmt.Printf("╭─────┬─────┬─────╮\n")
-	fmt.Printf("│  %d  │  %d  │  %d  │\n", b.getFieldValue(0, 0), b.getFieldValue(1, 0), b.getFieldValue(2, 0))
-	fmt.Printf("├─────┼─────┼─────┤\n")
-	fmt.Printf("│  %d  │  %d  │  %d  │\n", b.getFieldValue(0, 1), b.getFieldValue(1, 1), b.getFieldValue(2, 1))
-	fmt.Printf("├─────┼─────┼─────┤\n")
-	fmt.Printf("│  %d  │  %d  │  %d  │\n", b.getFieldValue(0, 2), b.getFieldValue(1, 2), b.getFieldValue(2, 2))
-	fmt.Printf("╰─────┴─────┴─────╯\n")
+func (b *box) getResultBoxString() string {
+	var result string
+	result = fmt.Sprintf("%s:\n", b.id)
+	result = fmt.Sprintf("╭─────┬─────┬─────╮\n")
+	result += fmt.Sprintf("│     %d     │     %d     │     %d     │\n", b.getFieldValue(0, 0), b.getFieldValue(1, 0), b.getFieldValue(2, 0))
+	result += fmt.Sprintf("├─────┼─────┼─────┤\n")
+	result += fmt.Sprintf("│     %d     │     %d     │     %d     │\n", b.getFieldValue(0, 1), b.getFieldValue(1, 1), b.getFieldValue(2, 1))
+	result += fmt.Sprintf("├─────┼─────┼─────┤\n")
+	result += fmt.Sprintf("│     %d     │     %d     │     %d     │\n", b.getFieldValue(0, 2), b.getFieldValue(1, 2), b.getFieldValue(2, 2))
+	result += fmt.Sprintf("╰─────┴─────┴─────╯\n")
+	return result
 }

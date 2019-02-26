@@ -28,7 +28,6 @@ func processMessages() {
 					checkSoftErr(err)
 					myBox.setRowValue(y, val)
 				}
-				redirectToNeighbor(message, matches[1])
 			}
 		} else {
 			log.Println("malformed message received " + message)

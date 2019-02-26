@@ -8,6 +8,7 @@ var myBox box
 
 // Initializes the game
 func InitializeSudoku(fieldString string, boxID *string) {
-	log.Println("Initializig Sudoku Solver!")
+	log.Println("Initializing Sudoku Solver!")
 	myBox.initializeBox(boxID, fieldString)
+	sendFieldConfiguration()
 }

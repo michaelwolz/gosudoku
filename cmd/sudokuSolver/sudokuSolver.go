@@ -12,20 +12,22 @@ var (
 	inputFile      string
 	managerAddress string
 	boxID          string
-	lport          int
+	telegramToken  string
 	mport          int
 )
+
+var Done = make(chan int)
 
 // Initializes flag configuration
 func init() {
 	flag.StringVar(&inputFile, "input", "", "Input Sudoku field as .txt")
 	flag.StringVar(&boxID, "boxID", "", "Box Number")
 	flag.IntVar(&mport, "mport", -1, "Manager port")
-	flag.IntVar(&lport, "lport", -1, "Local port")
 	flag.StringVar(&managerAddress, "maddress", "127.0.0.1", "Address of the box manager")
+	flag.StringVar(&telegramToken, "telegramtoken", "", "Token of the Telegram Bot")
 }
 
-// Usage: sudokuSolver -input={INPUTFILE} -lport={LOCALPORT} -maddress={MANAGERADDRESS} -mport={MANAGERPORT} -boxID={BOXNUMBER}
+// Usage: sudokuSolver -input={INPUTFILE} -telegramtoken={TOKEN} -maddress={MANAGERADDRESS} -mport={MANAGERPORT} -boxID={BOXNUMBER}
 func main() {
 	flag.Parse()
 
@@ -39,8 +41,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	if lport == -1 {
-		fmt.Println("-lport option is missing!")
+	if telegramToken == "" {
+		fmt.Println("-telegramtoken option is missing!")
 		os.Exit(1)
 	}
 
@@ -49,9 +51,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	go gosudoku.StartTelegramBot(telegramToken)
 	gosudoku.InitializeSudoku(readFile(inputFile), &boxID)
-	gosudoku.LaunchTCPServer(&lport)
-	gosudoku.ConnectToManager(&managerAddress, &mport, &lport)
 
 	<-gosudoku.Done
 }
