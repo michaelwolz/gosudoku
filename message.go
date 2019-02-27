@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-var msgProcessRegex = regexp.MustCompile(`^(BOX_[A,D,G][1,4,7]),([0-2]),([0-2]):([1-9])$`)
-var msgRegex = regexp.MustCompile(`^BOX_[A,D,G][1,4,7],[0-2],[0-2]:[1-9]$`)
+var msgProcessRegex = regexp.MustCompile(`^(box_[a,d,g][1,4,7]),([0-2]),([0-2]):([1-9])$`)
+var msgRegex = regexp.MustCompile(`^box_[a,d,g][1,4,7],[0-2],[0-2]:[1-9]$`)
 var msgChan = make(chan string, 100)
 
 func processMessages() {
