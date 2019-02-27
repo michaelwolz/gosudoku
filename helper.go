@@ -35,3 +35,17 @@ func readFieldConfigStr(config string) (int, int, int) {
 	checkSoftErr(err)
 	return x, y, v
 }
+
+// Telegram Token
+// ICH WEIß, DASS DIE NICHT INS ÖFFENTLICHE GIT SOLLTEN! IST MIR ABER EGAL. NACH DEM PROJEKT WERDEN DIE BOTS GELÖSCHT
+var TToken = map[string]string{
+	"box_a1": "648612807:AAGOVvhv6UQyYiZecpzGmtL18JhhXNVnzqg",
+	"box_a4": "773694483:AAHTXYimkAMgJlmBBqlkutz7e-1MmmqSPn8",
+	"box_a7": "671641632:AAFht6y6Z1mZIFFPrlZsPPEP658zqKkie5I",
+	"box_d1": "748119613:AAGs-0XwGgwUYWsOJcteuKhogbekIG0SPnQ",
+	"box_d4": "673313567:AAF-4LyyAcT6pTLO-c6q590h9AuGwnp5E5U",
+	"box_d7": "786901164:AAHoeXedQ9GKnuabYMMwTY95edmhLEEREVo",
+	"box_g1": "682420506:AAFVkYwHzcMKOQgpbfUlPvceCqJ9TD7SOxw",
+	"box_g4": "612894313:AAHF2XkJBLQ7kqqLw8wi4I_8ylVd8lsYffs",
+	"box_g7": "747163696:AAECvpkingsd52z3pn_GgtQ633_uWeYVDaU",
+}

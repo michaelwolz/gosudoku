@@ -95,6 +95,7 @@ func (b *box) checkAndSet(index int) {
 		sendUpdate(x, y, val)
 		if !b.boxFinished && b.completed() {
 			b.boxFinished = true
+			sendReady()
 			log.Println("Box is finished.")
 			drawResultBox()
 			Done <- 1

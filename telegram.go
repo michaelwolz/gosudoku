@@ -28,7 +28,7 @@ func StartTelegramBot(token string) {
 	checkErr(err)
 
 	bot.HandleFunc("/fieldconfig {fieldconfig}", FieldConfigHandler)
-	bot.HandleFunc("/solve", StartHandler)
+	bot.HandleFunc("/start", StartHandler)
 	//bot.HandleDefault(DefaultHandler)
 
 	connectedCh <- true
@@ -67,6 +67,14 @@ func sendFieldConfiguration() {
 		}
 	}
 
+}
+
+func sendReady() {
+	result := "/ready " + myBox.id
+	for _, val := range myBox.values {
+		result += "," + strconv.Itoa(val)
+	}
+	sendMessage(result)
 }
 
 func sendUpdate(x, y, val int) {
